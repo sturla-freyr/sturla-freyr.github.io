@@ -1,0 +1,51 @@
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
+<title> Tolvugrafík </title>
+
+<script id="vertex-shader" type="x-shader/x-vertex">
+attribute vec3 vPosition;
+attribute vec3 vColor;
+varying vec4 color;
+uniform mat4 rotation;
+
+void main()
+{
+    gl_Position = rotation * vec4(vPosition, 1.0);
+    color = vec4(vColor, 1.0);
+}
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;
+
+varying vec4 color;
+
+void main()
+{
+    gl_FragColor = color;
+}
+</script>
+
+<script type="text/javascript" src="./Common/webgl-utils.js"></script>
+<script type="text/javascript" src="./Common/initShaders.js"></script>
+<script type="text/javascript" src="./Common/MV.js"></script>
+<script type="text/javascript" src="hhpyramid.js"></script>
+
+</head>
+
+<body>
+    <table style="width:100%">
+        <tr>
+          <td><center> <h1> TÖL105M Tölvugrafík </h1>
+                       <h2>Haust 2024</h2></center> </td>
+          <td><center> <canvas id="gl-canvas" width="200" height="200"></center></td>
+        </tr>
+      </table>
+  <p>Below are links to other HTML files in this directory:</p>
+  <ul id="file-list">
+    <!-- PLACEHOLDER -->
+     <li><a href="tri.html">Triangle</a></li>
+     <li><a href="sierpinski.html">Sierpinski</a></li>
+  </ul>
+</body>
+</html>
