@@ -3,7 +3,7 @@
 var gl;
 var points;
 
-var NumPoints = 5000;
+var NumPoints = 5000000;
 
 window.onload = function init()
 {
@@ -40,7 +40,14 @@ window.onload = function init()
     // last point and a randomly chosen vertex
 
     for ( var i = 0; points.length < NumPoints; ++i ) {
-        var j = Math.floor(Math.random() * 3);
+        var j;
+    	var rand = Math.random();
+
+    	if (rand < 0.9) {
+            j = 0;
+        } else {
+            j = Math.floor(Math.random() * 2) + 1;
+        }
         p = add( points[i], vertices[j] );
         p = scale( 0.5, p );
         points.push( p );
