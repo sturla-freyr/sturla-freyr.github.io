@@ -37,21 +37,12 @@ window.onload = function init()
     ]);
     */
     var vertices = new Float32Array([
-        0.75, -0.75, // 0
-        0.75, -0.25, // 1
-        0.25, -0.75, // 2
-        0.25, -0.25, // 3
-        -0.25, -0.75,// 4
-        -0.25, -0.25,// 5
-        -0.75, -0.75,// 6
-        -0.75, -0.25,// 7
-        -0.25, -0.25, // 5
-        -0.75, -0.25,// 7
-        -0.25, 0.25, // 8
-        -0.75, 0.25, //9
-        -0.25, 0.75, //10
-        -0.75, 0.75, //11
-
+        0.45, -0.35,
+        0.45, -0.75,
+        -0.35, -0.35,
+        -0.75, -0.75,
+        -0.35, 0.75,
+        -0.75, 0.75,
     ]);
     //  Configure WebGL
     gl.viewport( 0, 0, canvas.width, canvas.height );
@@ -80,5 +71,5 @@ window.onload = function init()
 
 function render() {
     gl.clear( gl.COLOR_BUFFER_BIT );
-    gl.drawArrays( gl.TRIANGLE_STRIP, 0, 14 );
+    gl.drawArrays( gl.TRIANGLE_STRIP, 0, 6 );
 }
