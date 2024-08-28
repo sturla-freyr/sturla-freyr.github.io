@@ -14,28 +14,6 @@ window.onload = function init()
     gl = WebGLUtils.setupWebGL( canvas );
     if ( !gl ) { alert( "WebGL isn't available" ); }
 
-    /*var vertices = new Float32Array([-0.75, -0.75,
-                                     -0.75,  0.75,
-                                     -0.35,  0.75,
-                                     -0.35, -0.35,
-                                      0.45, -0.35,
-                                      0.45, -0.75]);
-
-    
-   
-    var vertices = new Float32Array([
-        -0.75,  0.75,  // A (Top-left corner)
-        -0.25,  0.75,  // B (Top-right corner)
-        -0.75,  0.25,  // D (Bottom-left corner of the vertical part)
-        -0.25,  0.25,  // E (Bottom-right corner of the vertical part)
-        -0.75, -0.25,  // F (Far-left corner of the bottom horizontal part)
-        -0.25, -0.25,  // G (Far-right corner of the bottom horizontal part)
-        -0.75, -0.75,  // H (Bottom-left corner of the full L-shape)
-        -0.25, -0.75,  // I (Bottom-right corner of the full L-shape)
-        0.25, -0.75,  // J (Far-right extended part)
-        0.25, -0.25   // K (Far-right vertical continuation)
-    ]);
-    */
     var vertices = new Float32Array([
         0.45, -0.35,
         0.45, -0.75,
