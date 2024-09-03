@@ -1,0 +1,59 @@
+/* Wrapper for canvas and level info */
+#game-container {
+    display: flex;
+    justify-content: flex-start;
+    align-items: stretch;
+    max-width: 500px;
+    margin: 20px auto; /* Center the container on the page */
+    padding: 20px;
+    background-color: #444;
+    border-radius: 10px;
+}
+
+/* Canvas styling */
+#gl-canvas {
+    border: 1px solid black;
+    flex-shrink: 0; /* Prevent the canvas from shrinking or stretching */
+    height: auto; /* Ensure the canvas keeps its natural height */
+}
+
+/* Level info styling */
+#level-info {
+    margin-left: 5px; /* Minimized space between canvas and level info */
+    font-family: Arial, sans-serif;
+    color: white;
+    background-color: #333;
+    padding: 10px;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start; 
+}
+
+/* General body styling */
+body, html {
+    background-color: #282c34;
+    color: white;
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    display:flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Styling the homepage link */
+li {
+    list-style: none;
+    margin-top: -38px;
+}
+
+a {
+    color: white;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}

@@ -1,15 +1,20 @@
+import {createBird, createBullet, checkCollision, getBoundingBox} from './utils.js'
+
 var gl;
-var points;
+var canvas;
+
 var mouseX;  
 var movement = false;
 
-var bullets = [];
+var level;
+var score = 0;
 var bulletSpeed = 0.01;
-var maxBullets = 3;
+var maxBullets = 30;
 var bulletPool = [];
+var hits;
 
-var birds = [];
-var maxBirds = 3;
+var maxBirds = 25;
+var levelBirds;
 var birdSpeedRange = [0.003, 0.01];
 var birdHeightRange = [0.75, 0.95];
 var birdPool = [];
@@ -23,7 +28,7 @@ var vPosition;
 
 window.onload = function init()
 {
-    var canvas = document.getElementById( "gl-canvas" );
+    canvas = document.getElementById( "gl-canvas" );
     
     gl = WebGLUtils.setupWebGL( canvas );
     if ( !gl ) { alert( "WebGL isn't available" ); }
@@ -33,6 +38,7 @@ window.onload = function init()
         -0.02, -0.98,
         0, -0.92, 
     ]);
+
     //  Configure WebGL
     gl.viewport( 0, 0, canvas.width, canvas.height );
     gl.clearColor( 0.0, 0.0, 0.0, 0.02 );
@@ -62,7 +68,20 @@ window.onload = function init()
     bulletBufferId = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, bulletBufferId);
     gl.bufferData(gl.ARRAY_BUFFER, maxBullets * 12 * 4, gl.DYNAMIC_DRAW);
+    
+    for (let i = 0; i < maxBirds; i++) {
+        birdPool.push(createBird());
+    }
 
+    for (let i = 0; i < maxBullets; i++) {
+        bulletPool.push(createBullet());
+    }
+
+    listenForCanvasEvents()
+    startLevel(1);
+};
+
+function listenForCanvasEvents(){
     canvas.addEventListener("mousedown", function(e){
         movement = true;
         mouseX = e.offsetX;
@@ -85,36 +104,6 @@ window.onload = function init()
             gl.bufferSubData(gl.ARRAY_BUFFER, 0, vertices);
         }
     });
-    
-    for (let i = 0; i < maxBirds; i++) {
-        birdPool.push(createBird());
-    }
-
-    for (let i = 0; i < maxBirds; i++) {
-        addBird();
-    }
-
-    for (let i = 0; i < maxBullets; i++) {
-        bulletPool.push(createBullet());
-    }
-    
-
-    render();
-};
-
-function createBullet() {
-    return {
-        vertices: new Float32Array(12), // 6 vertices * 2 coordinates
-        visible: false
-    };
-}
-
-function createBird() {
-    return {
-        vertices: new Float32Array(12), // 6 vertices * 2 coordinates
-        speed: 0,
-        visible: false
-    };
 }
 
 function addBird() {
@@ -141,7 +130,7 @@ function addBird() {
         birdX - 0.3 * direction, birdY,
         birdX - 0.3 * direction, birdY + 0.05
     ]);
-    inactiveBird.speed = birdSpeed * direction;
+    inactiveBird.speed = (birdSpeed + (level/1000)) * direction;
     inactiveBird.visible = true;
 
     gl.bindBuffer(gl.ARRAY_BUFFER, birdBufferId);
@@ -175,44 +164,6 @@ function shootBullet() {
     gl.bufferSubData(gl.ARRAY_BUFFER, bulletPool.indexOf(inactiveBullet) * 12 * 4, inactiveBullet.vertices);
 }
 
-function resetBird(bird, index) {
-    var birdX = Math.random() > 0.5 ? -1.3 : 1.3;
-    var birdY = Math.random() * (birdHeightRange[1] - birdHeightRange[0]) + birdHeightRange[0];
-    var direction = birdX < 0 ? 1 : -1;
-
-    bird.vertices = new Float32Array([
-        birdX, birdY,
-        birdX - 0.3 * direction, birdY,
-        birdX, birdY + 0.05,
-        birdX, birdY + 0.05,
-        birdX - 0.3 * direction, birdY,
-        birdX - 0.3 * direction, birdY + 0.05
-    ]);
-
-    bird.speed = direction * (Math.random() * (birdSpeedRange[1] - birdSpeedRange[0]) + birdSpeedRange[0]);
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, birdBufferId);
-    gl.bufferSubData(gl.ARRAY_BUFFER, index * 12 * 4, bird.vertices);
-}
-
-function getBoundingBox(vertices) {
-    var minX = Math.min(vertices[0], vertices[2], vertices[4]);
-    var maxX = Math.max(vertices[0], vertices[2], vertices[4]);
-    var minY = Math.min(vertices[1], vertices[3], vertices[5]);
-    var maxY = Math.max(vertices[1], vertices[3], vertices[5]);
-
-    return { minX, maxX, minY, maxY };
-}
-
-function checkCollision(bulletBox, birdBox) {
-    return (
-        bulletBox.maxX > birdBox.minX &&
-        bulletBox.minX < birdBox.maxX &&
-        bulletBox.maxY > birdBox.minY &&
-        bulletBox.minY < birdBox.maxY
-    );
-}
-
 function render() {
     gl.clear(gl.COLOR_BUFFER_BIT);
     
@@ -230,7 +181,7 @@ function render() {
                 bullet.vertices[i] += bulletSpeed;
             }
 
-            if (bullet.vertices[1] > 1.0) {
+            if (bullet.vertices[1] > 1.1) {
                 bullet.visible = false;
             } else {
                 gl.bufferSubData(gl.ARRAY_BUFFER, bulletIndex * 12 * 4, bullet.vertices);
@@ -241,9 +192,13 @@ function render() {
                     if (bird.visible) {
                         var birdBox = getBoundingBox(bird.vertices);
                         if (checkCollision(bulletBox, birdBox)) {
+                            hits++;
                             bird.visible = false;
                             bullet.visible = false;
-                            console.log("Collision detected between bullet and bird!");
+                            increaseScore();
+                            if (hits == levelBirds){
+                                startLevel(level+1);
+                            }
                         }
                     }
                 });
@@ -270,6 +225,31 @@ function render() {
             }
         }
     });
-
     window.requestAnimFrame(render);
+}
+
+function startLevel(lvl){
+    if (lvl > 5){
+        console.log("game won!")
+    }
+    level = lvl;
+    var b = maxBirds/5;
+    b *= level;
+    levelBirds = b;
+    hits = 0;
+
+    for (let i = 0; i < b; i++) {
+        addBird();
+    }
+    render()
+}
+
+function updateLevelInfo() {
+    document.getElementById('level-number').textContent = level;
+    document.getElementById('score-number').textContent = score;
+}
+
+function increaseScore() {
+    score += level;
+    updateLevelInfo();
 }

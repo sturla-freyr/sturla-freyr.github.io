@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html>
 <head>
+<link rel="stylesheet" href="styles.css" />
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
 <title>DUCKS</title>
-
 
 <script id="vertex-shader" type="x-shader/x-vertex">
 attribute vec4 vPosition;
@@ -29,13 +28,19 @@ main()
 <script type="text/javascript" src="../Common/webgl-utils.js"></script>
 <script type="text/javascript" src="../Common/initShaders.js"></script>
 <script type="text/javascript" src="../Common/MV.js"></script>
-<script type="text/javascript" src="dh.js"></script>
+<script type="module" src="./dh.js"></script>
 </head>   
 
 <body>
-    <center><canvas id="gl-canvas" width="374" height="512">
-    Oops ... your browser doesn't support the HTML5 canvas element
-    </canvas></center>
+    <div id="game-container">
+        <canvas id="gl-canvas" width="374" height="512">
+            Oops ... your browser doesn't support the HTML5 canvas element
+        </canvas>
+        <div id="level-info">
+            <h2>Level: <span id="level-number">1</span></h2>
+            <p>Score: <span id="score-number">0</span></p>
+        </div>
+    </div>
     <li><a href="../index.html">Homepage</a></li>
 </body>
 </html>
