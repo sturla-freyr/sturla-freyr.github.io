@@ -241,6 +241,7 @@ function startLevel(lvl){
     for (let i = 0; i < b; i++) {
         addBird();
     }
+    updateLevelInfo();
     render()
 }
 
