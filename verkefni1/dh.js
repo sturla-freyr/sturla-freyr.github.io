@@ -91,17 +91,27 @@ function listenForCanvasEvents(){
         movement = false;
     } );
 
-    canvas.addEventListener("mousemove", function(e){
-        if(movement) {
+    canvas.addEventListener("mousemove", function(e) {
+        if (movement) {
             var xmove = 2 * (e.offsetX - mouseX) / canvas.width;
             mouseX = e.offsetX;
     
+            // Calculate new positions for boundary check
+            var newPositions = vertices.slice(); // Copy current vertices
             for (let i = 0; i < 3; i++) {
-                vertices[i * 2] += xmove;
+                newPositions[i * 2] += xmove;
             }
     
-            gl.bindBuffer(gl.ARRAY_BUFFER, bufferId);
-            gl.bufferSubData(gl.ARRAY_BUFFER, 0, vertices);
+            // Boundary check: Prevent going off-screen
+            var minX = Math.min(newPositions[0], newPositions[2], newPositions[4]); // Left-most point
+            var maxX = Math.max(newPositions[0], newPositions[2], newPositions[4]); // Right-most point
+    
+            if (minX >= -1 && maxX <= 1) {
+                // Update vertices if within bounds
+                vertices = newPositions;
+                gl.bindBuffer(gl.ARRAY_BUFFER, bufferId);
+                gl.bufferSubData(gl.ARRAY_BUFFER, 0, vertices);
+            }
         }
     });
 }
