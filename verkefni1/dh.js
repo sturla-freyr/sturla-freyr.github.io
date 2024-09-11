@@ -2,6 +2,9 @@ import {createBird, createBullet, checkCollision, getBoundingBox} from './utils.
 
 var gl;
 var canvas;
+var program;
+var vPosition;
+var fColor;
 
 var mouseX;  
 var movement = false;
@@ -21,17 +24,26 @@ var birdPool = [];
 
 var vertices;
 var bufferId;
-var birdBufferId;
 var bulletBufferId;
 
-var vPosition;
+var birdBufferId;
+var birdColorBufferId;
+const wingSpan = 0.1;  // Adjust this value to change the wing flap height
+const flapInterval = 700;  // Adjust this to change how often the wing flaps (higher number = slower flap)
 
-window.onload = function init()
-{
-    canvas = document.getElementById( "gl-canvas" );
+
+
+window.onload = function init() {
+    canvas = document.getElementById("gl-canvas");
     
-    gl = WebGLUtils.setupWebGL( canvas );
-    if ( !gl ) { alert( "WebGL isn't available" ); }
+    gl = WebGLUtils.setupWebGL(canvas);
+    if (!gl) { alert("WebGL isn't available"); }
+
+    program = initShaders(gl, "vertex-shader", "fragment-shader");
+    gl.useProgram(program);
+
+    vPosition = gl.getAttribLocation(program, "vPosition");
+    fColor = gl.getAttribLocation(program, "vColor");
 
     vertices = new Float32Array([
         0.02, -0.98,    // Byssa
@@ -40,30 +52,46 @@ window.onload = function init()
     ]);
 
     //  Configure WebGL
-    gl.viewport( 0, 0, canvas.width, canvas.height );
-    gl.clearColor( 0.0, 0.0, 0.0, 0.02 );
-    
-    //  Load shaders and initialize attribute buffers
-    
-    var program = initShaders( gl, "vertex-shader", "fragment-shader" );
-    gl.useProgram( program );
-    
-    // Load the data into the GPU
-    
-    bufferId = gl.createBuffer();
-    gl.bindBuffer( gl.ARRAY_BUFFER, bufferId );
-    gl.bufferData( gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW );
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clearColor(0.0, 0.0, 0.0, 0.02);
 
-    // Associate out shader variables with our data buffer
+    // Set up bird color buffer
+    birdColorBufferId = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, birdColorBufferId);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(maxBirds * 30 * 4), gl.STATIC_DRAW);
     
-    vPosition = gl.getAttribLocation(program, "vPosition");
+    let colorData = new Float32Array(maxBirds * 15 * 4);
+    for (let i = 0; i < maxBirds; i++) {
+    // Colors for each triangle (RGBA format)
+    const colors = [
+        [1.0, 0.0, 0.0, 1.0], // Red (body triangle 1)
+        [0.0, 1.0, 0.0, 1.0], // Green (body triangle 2)
+        [0.0, 0.0, 1.0, 1.0], // Blue (tail)
+        [1.0, 1.0, 0.0, 1.0], // Yellow (beak)
+        [1.0, 0.0, 1.0, 1.0]  // Magenta (wing)
+    ];
+
+    for (let j = 0; j < 5; j++) { // 5 triangles per bird
+        for (let k = 0; k < 3; k++) { // 3 vertices per triangle
+            const colorIndex = (i * 15 + j * 3 + k) * 4;
+            colorData.set(colors[j], colorIndex);
+        }
+    }
+}
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, colorData);
+
+    // Load the data into the GPU
+    bufferId = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, bufferId);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+    // Associate our shader variables with our data buffer
     gl.vertexAttribPointer(vPosition, 2, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(vPosition);
 
-    
     birdBufferId = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, birdBufferId);
-    gl.bufferData(gl.ARRAY_BUFFER, maxBirds * 12 * 4, gl.DYNAMIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, maxBirds * 30 * 4, gl.DYNAMIC_DRAW);
 
     bulletBufferId = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, bulletBufferId);
@@ -77,7 +105,7 @@ window.onload = function init()
         bulletPool.push(createBullet());
     }
 
-    listenForCanvasEvents()
+    listenForCanvasEvents();
     startLevel(1);
 };
 
@@ -133,18 +161,35 @@ function addBird() {
     }
 
     inactiveBird.vertices.set([
-        birdX, birdY,
-        birdX - 0.3 * direction, birdY,
-        birdX, birdY + 0.05,
-        birdX, birdY + 0.05,
-        birdX - 0.3 * direction, birdY,
-        birdX - 0.3 * direction, birdY + 0.05
+        // Body (2 triangles)
+        birdX, birdY,                              // Bottom-left
+        birdX, birdY + 0.05,                       // Top-left
+        birdX - 0.2 * direction, birdY,            // Bottom-right
+        birdX, birdY + 0.05,                       // Top-left
+        birdX - 0.2 * direction, birdY,            // Bottom-right
+        birdX - 0.2 * direction, birdY + 0.05,     // Top-right
+
+        // Tail (1 triangle)
+        birdX - 0.2 * direction, birdY,            // Base of the tail
+        birdX - 0.2 * direction, birdY + 0.05,      // Top of the tail
+        birdX - 0.3 * direction, birdY + 0.05,            // Sharp corner of the tail
+
+        // Beak (1 triangle)
+        birdX, birdY + 0.05,                       // Top of the beak
+        birdX + 0.08 * direction, birdY + 0.025,   // Tip of the beak
+        birdX, birdY,                              // Bottom of the beak
+       // Wing (1 triangle)
+        birdX - 0.02 * direction, birdY + 0.025,   // Inner vertex
+        birdX - 0.15 * direction, birdY + 0.1,     // Tip of the wing
+        birdX - 0.18 * direction, birdY + 0.025    // Another point on the body
     ]);
+
     inactiveBird.speed = (birdSpeed + (level/1000)) * direction;
     inactiveBird.visible = true;
+    inactiveBird.lastFlapTime = Date.now();
 
     gl.bindBuffer(gl.ARRAY_BUFFER, birdBufferId);
-    gl.bufferSubData(gl.ARRAY_BUFFER, birdPool.indexOf(inactiveBird) * 12 * 4, inactiveBird.vertices);
+    gl.bufferSubData(gl.ARRAY_BUFFER, birdPool.indexOf(inactiveBird) * 15 * 4, inactiveBird.vertices);
 }
 
 window.addEventListener("keydown", function (e) {
@@ -177,9 +222,10 @@ function shootBullet() {
 function render() {
     gl.clear(gl.COLOR_BUFFER_BIT);
     
-    // Draw Byssa
     gl.bindBuffer(gl.ARRAY_BUFFER, bufferId);
     gl.vertexAttribPointer(vPosition, 2, gl.FLOAT, false, 0, 0);
+    gl.disableVertexAttribArray(fColor);  // Disable the color attribute array
+    gl.vertexAttrib4f(fColor, 1.0, 0.0, 0.0, 1.0);  // Set a constant color
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
     // Draw bullets
@@ -195,6 +241,8 @@ function render() {
                 bullet.visible = false;
             } else {
                 gl.bufferSubData(gl.ARRAY_BUFFER, bulletIndex * 12 * 4, bullet.vertices);
+                gl.disableVertexAttribArray(fColor);
+                gl.vertexAttrib4f(fColor, 1.0, 0.0, 0.0, 1.0);
                 gl.drawArrays(gl.TRIANGLES, bulletIndex * 6, 6);
 
                 var bulletBox = getBoundingBox(bullet.vertices);
@@ -219,29 +267,53 @@ function render() {
     // Draw birds
     gl.bindBuffer(gl.ARRAY_BUFFER, birdBufferId);
     gl.vertexAttribPointer(vPosition, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(vPosition);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, birdColorBufferId);
+    gl.vertexAttribPointer(fColor, 4, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(fColor);
+
     birdPool.forEach((bird, index) => {
         if (bird.visible) {
+            // Update bird position
             for (let i = 0; i < bird.vertices.length; i += 2) {
                 bird.vertices[i] += bird.speed;
+            }
+
+            // Simple wing flap
+            var currentTime = Date.now();
+            if (currentTime - bird.lastFlapTime >= flapInterval) {  // Only flap every few frames
+                const bodyY = bird.vertices[1];  // Y-coordinate of the bird's body
+                
+                if (bird.wingUp) {
+                    bird.vertices[27] = bodyY + wingSpan;  // Move wing up
+                } else {
+                    bird.vertices[27] = bodyY - wingSpan;  // Move wing down
+                }
+                bird.wingUp = !bird.wingUp;  // Toggle wing state
+                bird.lastFlapTime = currentTime; 
             }
 
             var birdOffScreen = (bird.speed > 0 && bird.vertices[0] > 1.1) || (bird.speed < 0 && bird.vertices[0] < -1.1);
             if (birdOffScreen) {
                 bird.visible = false;
-                addBird(); // Immediately add a new bird to replace the off-screen one
+                addBird(); // Add a new bird to replace the off-screen one
             } else {
-                gl.bufferSubData(gl.ARRAY_BUFFER, index * 12 * 4, bird.vertices);
-                gl.drawArrays(gl.TRIANGLES, index * 6, 6);
+                // Update bird vertex buffer
+                gl.bindBuffer(gl.ARRAY_BUFFER, birdBufferId);
+                gl.bufferSubData(gl.ARRAY_BUFFER, index * 30 * 4, bird.vertices);
+
+                // Draw the bird
+                gl.drawArrays(gl.TRIANGLES, index * 15, 15);
             }
         }
     });
+
     window.requestAnimFrame(render);
 }
 
 function startLevel(lvl){
-    if (lvl > 5){
-        console.log("game won!")
-    }
+    if(lvl <= 5){
     level = lvl;
     var b = maxBirds/5;
     b *= level;
@@ -253,6 +325,7 @@ function startLevel(lvl){
     }
     updateLevelInfo();
     render()
+    }
 }
 
 function updateLevelInfo() {

@@ -7,9 +7,11 @@ export function createBullet() {
 
 export function createBird() {
     return {
-        vertices: new Float32Array(12), // 6 vertices * 2 coordinates
+        vertices: new Float32Array(30), // 5 triangles *  3 vertices * 2 coordinates
         speed: 0,
-        visible: false
+        visible: false,
+        wingUp: false,
+        lastFlapTime: 0
     };
 }
 
