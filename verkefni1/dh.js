@@ -10,16 +10,17 @@ var mouseX;
 var movement = false;
 
 var level;
+var gameStatus;
 var score = 0;
 var bulletSpeed = 0.01;
-var maxBullets = 30;
+var maxBullets = 8;
 var bulletPool = [];
 var hits;
 
 var maxBirds = 25;
 var levelBirds;
 var birdSpeedRange = [0.003, 0.01];
-var birdHeightRange = [0.75, 0.95];
+var birdHeightRange = [0.5, 0.85];
 var birdPool = [];
 
 var vertices;
@@ -28,10 +29,12 @@ var bulletBufferId;
 
 var birdBufferId;
 var birdColorBufferId;
-const wingSpan = 0.1;  // Adjust this value to change the wing flap height
-const flapInterval = 700;  // Adjust this to change how often the wing flaps (higher number = slower flap)
+const wingSpan = 0.1;
+const flapInterval = 670;
 
-
+var grassBufferId;
+var grassVertices = [];
+var grassCount = 500;
 
 window.onload = function init() {
     canvas = document.getElementById("gl-canvas");
@@ -46,14 +49,14 @@ window.onload = function init() {
     fColor = gl.getAttribLocation(program, "vColor");
 
     vertices = new Float32Array([
-        0.02, -0.98,    // Byssa
-        -0.02, -0.98,
-        0, -0.92, 
+        0.06, -0.98,    // Byssa
+        -0.06, -0.98,
+        0, -0.85, 
     ]);
 
     //  Configure WebGL
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.clearColor(0.0, 0.0, 0.0, 0.02);
+    gl.clearColor(0.0, 0.0, 1.0, 0.02);
 
     // Set up bird color buffer
     birdColorBufferId = gl.createBuffer();
@@ -62,13 +65,13 @@ window.onload = function init() {
     
     let colorData = new Float32Array(maxBirds * 15 * 4);
     for (let i = 0; i < maxBirds; i++) {
-    // Colors for each triangle (RGBA format)
+    // Colors for irds
     const colors = [
-        [1.0, 0.0, 0.0, 1.0], // Red (body triangle 1)
-        [0.0, 1.0, 0.0, 1.0], // Green (body triangle 2)
-        [0.0, 0.0, 1.0, 1.0], // Blue (tail)
-        [1.0, 1.0, 0.0, 1.0], // Yellow (beak)
-        [1.0, 0.0, 1.0, 1.0]  // Magenta (wing)
+        [1.0, 1.0, 1.0, 1.0], // white
+        [1.0, 1.0, 1.0, 1.0], // white
+        [1.0, 1.0, 1.0, 1.0], // white
+        [1.0, 1.0, 0.0, 1.0], // Yellow
+        [0.0, 0.0, 0.0, 1.0]  // black
     ];
 
     for (let j = 0; j < 5; j++) { // 5 triangles per bird
@@ -105,122 +108,43 @@ window.onload = function init() {
         bulletPool.push(createBullet());
     }
 
+    for (let i = 0; i < grassCount; i++) {
+        // Randomize the position of the grass blade along the X-axis
+        let x = Math.random() * 2 - 1;
+        let y = -1;
+    
+        let grassHeight = 0.1 + Math.random() * 0.05;
+        let grassWidth = 0.01;
+    
+        grassVertices.push(
+            x, y,  // Bottom-left vertex
+            x + grassWidth / 2, y,  // Bottom-right vertex
+            x + grassWidth / 2, y + grassHeight  // Top-right vertex
+        );
+    }
+
+    // Buffer for grass vertices
+    grassBufferId = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, grassBufferId);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(grassVertices), gl.STATIC_DRAW);
+
     listenForCanvasEvents();
     startLevel(1);
 };
 
-function listenForCanvasEvents(){
-    canvas.addEventListener("mousedown", function(e){
-        movement = true;
-        mouseX = e.offsetX;
-    } );
-
-    canvas.addEventListener("mouseup", function(e){
-        movement = false;
-    } );
-
-    canvas.addEventListener("mousemove", function(e) {
-        if (movement) {
-            var xmove = 2 * (e.offsetX - mouseX) / canvas.width;
-            mouseX = e.offsetX;
-    
-            // Calculate new positions for boundary check
-            var newPositions = vertices.slice(); // Copy current vertices
-            for (let i = 0; i < 3; i++) {
-                newPositions[i * 2] += xmove;
-            }
-    
-            // Boundary check: Prevent going off-screen
-            var minX = Math.min(newPositions[0], newPositions[2], newPositions[4]); // Left-most point
-            var maxX = Math.max(newPositions[0], newPositions[2], newPositions[4]); // Right-most point
-    
-            if (minX >= -1 && maxX <= 1) {
-                // Update vertices if within bounds
-                vertices = newPositions;
-                gl.bindBuffer(gl.ARRAY_BUFFER, bufferId);
-                gl.bufferSubData(gl.ARRAY_BUFFER, 0, vertices);
-            }
-        }
-    });
-}
-
-function addBird() {
-    let inactiveBird = birdPool.find(bird => !bird.visible);
-    if (!inactiveBird) return;
-
-    var birdY = Math.random() * (birdHeightRange[1] - birdHeightRange[0]) + birdHeightRange[0];
-    var birdSpeed = Math.random() * (birdSpeedRange[1] - birdSpeedRange[0]) + birdSpeedRange[0];
-
-    var birdX, direction;
-    if (Math.random() > 0.5) {
-        birdX = -1.1; // Start slightly off-screen to the left
-        direction = 1; // Move right
-    } else {
-        birdX = 1.1; // Start slightly off-screen to the right
-        direction = -1; // Move left
-    }
-
-    inactiveBird.vertices.set([
-        // Body (2 triangles)
-        birdX, birdY,                              // Bottom-left
-        birdX, birdY + 0.05,                       // Top-left
-        birdX - 0.2 * direction, birdY,            // Bottom-right
-        birdX, birdY + 0.05,                       // Top-left
-        birdX - 0.2 * direction, birdY,            // Bottom-right
-        birdX - 0.2 * direction, birdY + 0.05,     // Top-right
-
-        // Tail (1 triangle)
-        birdX - 0.2 * direction, birdY,            // Base of the tail
-        birdX - 0.2 * direction, birdY + 0.05,      // Top of the tail
-        birdX - 0.3 * direction, birdY + 0.05,            // Sharp corner of the tail
-
-        // Beak (1 triangle)
-        birdX, birdY + 0.05,                       // Top of the beak
-        birdX + 0.08 * direction, birdY + 0.025,   // Tip of the beak
-        birdX, birdY,                              // Bottom of the beak
-       // Wing (1 triangle)
-        birdX - 0.02 * direction, birdY + 0.025,   // Inner vertex
-        birdX - 0.15 * direction, birdY + 0.1,     // Tip of the wing
-        birdX - 0.18 * direction, birdY + 0.025    // Another point on the body
-    ]);
-
-    inactiveBird.speed = (birdSpeed + (level/1000)) * direction;
-    inactiveBird.visible = true;
-    inactiveBird.lastFlapTime = Date.now();
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, birdBufferId);
-    gl.bufferSubData(gl.ARRAY_BUFFER, birdPool.indexOf(inactiveBird) * 15 * 4, inactiveBird.vertices);
-}
-
-window.addEventListener("keydown", function (e) {
-    if (e.code === "Space") {
-        shootBullet();
-    }
-});
-
-function shootBullet() {
-    let inactiveBullet = bulletPool.find(bullet => !bullet.visible);
-    if (!inactiveBullet) return;
-
-    var bulletX = vertices[4];
-    var bulletY = vertices[5];
-
-    inactiveBullet.vertices.set([
-        bulletX, bulletY,
-        bulletX, bulletY + 0.03,
-        bulletX + 0.01, bulletY + 0.03,
-        bulletX + 0.01, bulletY,
-        bulletX + 0.01, bulletY + 0.03,
-        bulletX, bulletY
-    ]);
-    inactiveBullet.visible = true;
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, bulletBufferId);
-    gl.bufferSubData(gl.ARRAY_BUFFER, bulletPool.indexOf(inactiveBullet) * 12 * 4, inactiveBullet.vertices);
-}
-
 function render() {
     gl.clear(gl.COLOR_BUFFER_BIT);
+
+    // Draw grass
+    gl.bindBuffer(gl.ARRAY_BUFFER, grassBufferId);
+    gl.vertexAttribPointer(vPosition, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(vPosition);
+
+    // Set grass color to green
+    gl.disableVertexAttribArray(fColor);  // Disable the color attribute array
+    gl.vertexAttrib4f(fColor, 0.0, 1.0, 0.0, 1.0);  // Set green color
+
+    gl.drawArrays(gl.TRIANGLES, 0, grassCount * 3);
     
     gl.bindBuffer(gl.ARRAY_BUFFER, bufferId);
     gl.vertexAttribPointer(vPosition, 2, gl.FLOAT, false, 0, 0);
@@ -294,7 +218,7 @@ function render() {
                 bird.lastFlapTime = currentTime; 
             }
 
-            var birdOffScreen = (bird.speed > 0 && bird.vertices[0] > 1.1) || (bird.speed < 0 && bird.vertices[0] < -1.1);
+            var birdOffScreen = (bird.speed > 0 && bird.vertices[0] > 1.3) || (bird.speed < 0 && bird.vertices[0] < -1.3);
             if (birdOffScreen) {
                 bird.visible = false;
                 addBird(); // Add a new bird to replace the off-screen one
@@ -312,17 +236,162 @@ function render() {
     window.requestAnimFrame(render);
 }
 
+function listenForCanvasEvents(){
+    canvas.addEventListener("mousedown", function(e){
+        movement = true;
+        mouseX = e.offsetX;
+    } );
+
+    canvas.addEventListener("mouseup", function(e){
+        movement = false;
+    } );
+
+    canvas.addEventListener("mousemove", function(e) {
+        if (movement) {
+            var xmove = 2 * (e.offsetX - mouseX) / canvas.width;
+            mouseX = e.offsetX;
+    
+            // Calculate new positions for boundary check
+            var newPositions = vertices.slice(); // Copy current vertices
+            for (let i = 0; i < 3; i++) {
+                newPositions[i * 2] += xmove;
+            }
+    
+            // Boundary check: Prevent going off-screen
+            var minX = Math.min(newPositions[0], newPositions[2], newPositions[4]); // Left-most point
+            var maxX = Math.max(newPositions[0], newPositions[2], newPositions[4]); // Right-most point
+    
+            if (minX >= -1 && maxX <= 1) {
+                // Update vertices if within bounds
+                vertices = newPositions;
+                gl.bindBuffer(gl.ARRAY_BUFFER, bufferId);
+                gl.bufferSubData(gl.ARRAY_BUFFER, 0, vertices);
+            }
+        }
+    });
+}
+
+function addBird() {
+    let inactiveBird = birdPool.find(bird => !bird.visible);
+    if (!inactiveBird) return;
+
+    var birdY = Math.random() * (birdHeightRange[1] - birdHeightRange[0]) + birdHeightRange[0];
+    var birdSpeed = Math.random() * (birdSpeedRange[1] - birdSpeedRange[0]) + birdSpeedRange[0];
+
+    var birdX, direction;
+    if (Math.random() > 0.5) {
+        birdX = -1.1; // Start slightly off-screen to the left
+        direction = 1; // Move right
+    } else {
+        birdX = 1.1; // Start slightly off-screen to the right
+        direction = -1; // Move left
+    }
+
+    inactiveBird.vertices.set([
+        // Body (2 triangles)
+        birdX, birdY,                              // Bottom-left
+        birdX, birdY + 0.05,                       // Top-left
+        birdX - 0.2 * direction, birdY,            // Bottom-right
+        birdX, birdY + 0.05,                       // Top-left
+        birdX - 0.2 * direction, birdY,            // Bottom-right
+        birdX - 0.2 * direction, birdY + 0.05,     // Top-right
+
+        // Tail (1 triangle)
+        birdX - 0.2 * direction, birdY,            // Base of the tail
+        birdX - 0.2 * direction, birdY + 0.05,     // Top of the tail
+        birdX - 0.3 * direction, birdY + 0.05,     // Sharp corner of the tail
+
+        // Beak (1 triangle)
+        birdX, birdY + 0.05,                       // Top of the beak
+        birdX + 0.08 * direction, birdY + 0.025,   // Tip of the beak
+        birdX, birdY,                              // Bottom of the beak
+       // Wing (1 triangle)
+        birdX - 0.02 * direction, birdY + 0.025,   // Inner vertex
+        birdX - 0.15 * direction, birdY + 0.1,     // Tip of the wing
+        birdX - 0.18 * direction, birdY + 0.025    // Another point on the body
+    ]);
+
+    inactiveBird.speed = (birdSpeed + (level/1000)) * direction;
+    inactiveBird.visible = true;
+    inactiveBird.lastFlapTime = Date.now();
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, birdBufferId);
+    gl.bufferSubData(gl.ARRAY_BUFFER, birdPool.indexOf(inactiveBird) * 15 * 4, inactiveBird.vertices);
+}
+
+window.addEventListener("keydown", function (e) {
+    if (e.code === "Space") {
+        shootBullet();
+    }
+});
+
+function shootBullet() {
+    let inactiveBullet = bulletPool.find(bullet => !bullet.visible);
+    if (!inactiveBullet) return;
+
+    var bulletX = vertices[4];
+    var bulletY = vertices[5];
+
+    inactiveBullet.vertices.set([
+        bulletX, bulletY,
+        bulletX, bulletY + 0.04,
+        bulletX + 0.02, bulletY + 0.04,
+        bulletX + 0.02, bulletY,
+        bulletX + 0.02, bulletY + 0.04,
+        bulletX, bulletY
+    ]);
+    inactiveBullet.visible = true;
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, bulletBufferId);
+    gl.bufferSubData(gl.ARRAY_BUFFER, bulletPool.indexOf(inactiveBullet) * 12 * 4, inactiveBullet.vertices);
+}
+
 function startLevel(lvl){
+
+    switch(lvl){
+        case 1:
+            level = lvl;
+            levelBirds = 1;
+            addBird();
+            addBird();
+            break;
+        case 2:
+            level = lvl;
+            levelBirds = 3;
+            addBird();
+            addBird();
+            addBird();
+            addBird();
+            break;
+        case 3:
+            level = lvl;
+            levelBirds = 5;
+            for (let i = 0; i < 7; i++) {
+                addBird();
+            }
+            break;
+        case 4:
+            level = lvl;
+            levelBirds = 7;
+            for (let i = 0; i < 11; i++) {
+                addBird();
+            }
+            break;
+        case 5:
+            level = lvl;
+            levelBirds = 15;
+            for (let i = 0; i < 18; i++) {
+                addBird();
+            }
+            break;
+        case 6:
+            gameStatus = "You win!";
+            break;
+    }
     if(lvl <= 5){
     level = lvl;
-    var b = maxBirds/5;
-    b *= level;
-    levelBirds = b;
-    hits = 0;
 
-    for (let i = 0; i < b; i++) {
-        addBird();
-    }
+    hits = 0;
     updateLevelInfo();
     render()
     }
@@ -331,6 +400,7 @@ function startLevel(lvl){
 function updateLevelInfo() {
     document.getElementById('level-number').textContent = level;
     document.getElementById('score-number').textContent = score;
+    document.getElementById('game-status').textContent = gameStatus;
 }
 
 function increaseScore() {
