@@ -48,15 +48,32 @@ window.onload = function init() {
     vPosition = gl.getAttribLocation(program, "vPosition");
     fColor = gl.getAttribLocation(program, "vColor");
 
-    vertices = new Float32Array([
-        0.06, -0.98,    // Byssa
-        -0.06, -0.98,
-        0, -0.85, 
-    ]);
-
     //  Configure WebGL
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(0.0, 0.0, 1.0, 0.02);
+
+    vertices = new Float32Array([
+        0.06, -0.98,    // Gun bottom left
+        -0.06, -0.98,   // Bottom right
+        0, -0.85,       // Top angle
+    ]);
+
+    // Load the data into the GPU
+    bufferId = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, bufferId);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+    // Associate shader variables with data buffer
+    gl.vertexAttribPointer(vPosition, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(vPosition);
+
+    birdBufferId = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, birdBufferId);
+    gl.bufferData(gl.ARRAY_BUFFER, maxBirds * 30 * 4, gl.DYNAMIC_DRAW);
+
+    for (let i = 0; i < maxBirds; i++) {
+        birdPool.push(createBird());
+    }
 
     // Set up bird color buffer
     birdColorBufferId = gl.createBuffer();
@@ -65,7 +82,7 @@ window.onload = function init() {
     
     let colorData = new Float32Array(maxBirds * 15 * 4);
     for (let i = 0; i < maxBirds; i++) {
-    // Colors for irds
+    // Colors for birds, 5 colors for 5 triangles
     const colors = [
         [1.0, 1.0, 1.0, 1.0], // white
         [1.0, 1.0, 1.0, 1.0], // white
@@ -83,33 +100,20 @@ window.onload = function init() {
 }
     gl.bufferSubData(gl.ARRAY_BUFFER, 0, colorData);
 
-    // Load the data into the GPU
-    bufferId = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, bufferId);
-    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-
-    // Associate our shader variables with our data buffer
-    gl.vertexAttribPointer(vPosition, 2, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(vPosition);
-
-    birdBufferId = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, birdBufferId);
-    gl.bufferData(gl.ARRAY_BUFFER, maxBirds * 30 * 4, gl.DYNAMIC_DRAW);
-
+    // Generate bullets
     bulletBufferId = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, bulletBufferId);
     gl.bufferData(gl.ARRAY_BUFFER, maxBullets * 12 * 4, gl.DYNAMIC_DRAW);
-    
-    for (let i = 0; i < maxBirds; i++) {
-        birdPool.push(createBird());
-    }
 
     for (let i = 0; i < maxBullets; i++) {
         bulletPool.push(createBullet());
     }
 
+//////////////////////////////////////////////////////////
+    // Generate grass
+//////////////////////////////////////////////////////////
     for (let i = 0; i < grassCount; i++) {
-        // Randomize the position of the grass blade along the X-axis
+        // Random grass blades along the X-axis
         let x = Math.random() * 2 - 1;
         let y = -1;
     
@@ -123,7 +127,6 @@ window.onload = function init() {
         );
     }
 
-    // Buffer for grass vertices
     grassBufferId = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, grassBufferId);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(grassVertices), gl.STATIC_DRAW);
@@ -134,25 +137,29 @@ window.onload = function init() {
 
 function render() {
     gl.clear(gl.COLOR_BUFFER_BIT);
-
+//////////////////////////////////////////////////////////
     // Draw grass
+//////////////////////////////////////////////////////////
     gl.bindBuffer(gl.ARRAY_BUFFER, grassBufferId);
     gl.vertexAttribPointer(vPosition, 2, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(vPosition);
 
-    // Set grass color to green
-    gl.disableVertexAttribArray(fColor);  // Disable the color attribute array
-    gl.vertexAttrib4f(fColor, 0.0, 1.0, 0.0, 1.0);  // Set green color
+    gl.disableVertexAttribArray(fColor);
+    gl.vertexAttrib4f(fColor, 0.0, 1.0, 0.0, 1.0);
 
     gl.drawArrays(gl.TRIANGLES, 0, grassCount * 3);
-    
+//////////////////////////////////////////////////////////
+    // Draw gun
+//////////////////////////////////////////////////////////    
     gl.bindBuffer(gl.ARRAY_BUFFER, bufferId);
     gl.vertexAttribPointer(vPosition, 2, gl.FLOAT, false, 0, 0);
     gl.disableVertexAttribArray(fColor);  // Disable the color attribute array
-    gl.vertexAttrib4f(fColor, 1.0, 0.0, 0.0, 1.0);  // Set a constant color
+    gl.vertexAttrib4f(fColor, 1.0, 0.0, 0.0, 1.0);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
+//////////////////////////////////////////////////////////
     // Draw bullets
+//////////////////////////////////////////////////////////
     gl.bindBuffer(gl.ARRAY_BUFFER, bulletBufferId);
     gl.vertexAttribPointer(vPosition, 2, gl.FLOAT, false, 0, 0);
     bulletPool.forEach((bullet, bulletIndex) => {
@@ -187,8 +194,9 @@ function render() {
             }
         }
     });
-
+//////////////////////////////////////////////////////////
     // Draw birds
+//////////////////////////////////////////////////////////
     gl.bindBuffer(gl.ARRAY_BUFFER, birdBufferId);
     gl.vertexAttribPointer(vPosition, 2, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(vPosition);
@@ -199,20 +207,19 @@ function render() {
 
     birdPool.forEach((bird, index) => {
         if (bird.visible) {
-            // Update bird position
             for (let i = 0; i < bird.vertices.length; i += 2) {
                 bird.vertices[i] += bird.speed;
             }
 
             // Simple wing flap
             var currentTime = Date.now();
-            if (currentTime - bird.lastFlapTime >= flapInterval) {  // Only flap every few frames
+            if (currentTime - bird.lastFlapTime >= flapInterval) {
                 const bodyY = bird.vertices[1];  // Y-coordinate of the bird's body
                 
                 if (bird.wingUp) {
-                    bird.vertices[27] = bodyY + wingSpan;  // Move wing up
+                    bird.vertices[27] = bodyY + wingSpan;
                 } else {
-                    bird.vertices[27] = bodyY - wingSpan;  // Move wing down
+                    bird.vertices[27] = bodyY - wingSpan;
                 }
                 bird.wingUp = !bird.wingUp;  // Toggle wing state
                 bird.lastFlapTime = currentTime; 
@@ -227,7 +234,6 @@ function render() {
                 gl.bindBuffer(gl.ARRAY_BUFFER, birdBufferId);
                 gl.bufferSubData(gl.ARRAY_BUFFER, index * 30 * 4, bird.vertices);
 
-                // Draw the bird
                 gl.drawArrays(gl.TRIANGLES, index * 15, 15);
             }
         }
@@ -280,11 +286,11 @@ function addBird() {
 
     var birdX, direction;
     if (Math.random() > 0.5) {
-        birdX = -1.1; // Start slightly off-screen to the left
-        direction = 1; // Move right
+        birdX = -1.1; 
+        direction = 1; 
     } else {
-        birdX = 1.1; // Start slightly off-screen to the right
-        direction = -1; // Move left
+        birdX = 1.1;
+        direction = -1;
     }
 
     inactiveBird.vertices.set([
@@ -329,7 +335,7 @@ function shootBullet() {
     let inactiveBullet = bulletPool.find(bullet => !bullet.visible);
     if (!inactiveBullet) return;
 
-    var bulletX = vertices[4];
+    var bulletX = vertices[4]; // Top angle in gun triangle
     var bulletY = vertices[5];
 
     inactiveBullet.vertices.set([
@@ -351,13 +357,15 @@ function startLevel(lvl){
     switch(lvl){
         case 1:
             level = lvl;
-            levelBirds = 1;
+            levelBirds = 2;
+            addBird();
             addBird();
             addBird();
             break;
         case 2:
             level = lvl;
-            levelBirds = 3;
+            levelBirds = 5;
+            addBird();
             addBird();
             addBird();
             addBird();
@@ -365,32 +373,34 @@ function startLevel(lvl){
             break;
         case 3:
             level = lvl;
-            levelBirds = 5;
-            for (let i = 0; i < 7; i++) {
+            levelBirds = 9;
+            for (let i = 0; i < 10; i++) {
                 addBird();
             }
             break;
         case 4:
             level = lvl;
-            levelBirds = 7;
-            for (let i = 0; i < 11; i++) {
+            levelBirds = 10;
+            for (let i = 0; i < 8; i++) {
                 addBird();
             }
             break;
         case 5:
             level = lvl;
-            levelBirds = 15;
-            for (let i = 0; i < 18; i++) {
+            levelBirds = 25;
+            for (let i = 0; i < 25; i++) {
                 addBird();
             }
             break;
         case 6:
             gameStatus = "You win!";
+            hits = 0;
+            updateLevelInfo();
+            render()
             break;
     }
     if(lvl <= 5){
     level = lvl;
-
     hits = 0;
     updateLevelInfo();
     render()
