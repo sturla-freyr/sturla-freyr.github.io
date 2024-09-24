@@ -90,6 +90,9 @@ window.onload = function init()
     minuteHandAngle = currentMinute * 6;
     secondHandAngle = currentSecond * 6;
 
+    console.log(currentSecond);
+    console.log(secondHandAngle);
+
     render();
 }
 
@@ -158,7 +161,7 @@ function render() {
 
     // Draw the hour hand
     //mv = mult(mv, translate(0.0, 0.0, 0.0));
-    mv = mult(mv, rotateZ(hourHandAngle+90));
+    mv = mult(mv, rotateZ(hourHandAngle));
     var mv1 = mult(mv, translate(0.165, 0, 0));
     mv1 = mult(mv1, scalem(0.33, 0.03, 0.01));
     gl.uniformMatrix4fv(matrixLoc, false, flatten(mv1));
@@ -166,9 +169,10 @@ function render() {
 
     // Byrja til hægri á fyrsta vísi 0.33
     mv = mult(mv, translate(0.32, 0, 0));
+    //mv = mult(mv, rotateZ(-hourHandAngle));
 
     // Draw the minute hand
-    mv = mult(mv, rotateZ(minuteHandAngle+90));
+    mv = mult(mv, rotateZ(minuteHandAngle));
     var mv2 = mult(mv, translate(0.165, 0, 0));
     mv2 = mult(mv2, scalem(0.33, 0.03, 0.01));
     mv2 = mult( mv2, rotateY(180) );
@@ -177,8 +181,9 @@ function render() {
 
     // Þriðji vísir
     mv = mult(mv, translate(0.32, 0, 0));
+    //mv = mult(mv, rotateZ(-minuteHandAngle));
 
-    mv = mult(mv, rotateZ(secondHandAngle+90));
+    mv = mult(mv, rotateZ(secondHandAngle+90-hourHandAngle));
     var mv3 = mult(mv, translate(0.165, 0, 0));
     mv3 = mult(mv3, scalem(0.33, 0.03, 0.01));
     mv3 = mult( mv3, rotateX(90) );
