@@ -127,7 +127,7 @@ function render()
 
     var mv = mat4();
     mv = mult( mv, rotateX(spinX) );
-    mv = mult( mv, rotateY(spinY) ) ;
+    mv = mult( mv, rotateY(spinY) );
 
     // First the right wall
     mv1 = mult( mv, translate( -0.5, 0.0, 0.0 ) );
