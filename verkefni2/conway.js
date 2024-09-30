@@ -28,6 +28,10 @@ var far = 100.0;
 var  fovy = 45.0;        // Field-of-view in Y direction angle (in degrees)
 var  aspect;
 
+var gameState = [];
+var numberCells = 0;
+const gridSize = 10;
+
 window.onload = function init()
 {
     canvas = document.getElementById( "gl-canvas" );
@@ -94,9 +98,65 @@ window.onload = function init()
     });
     
     window.addEventListener("keydown", handleKeyDown);
-
+    initializeGameState();
+    gameLoop();
     render();
 }
+
+function initializeGameState() {
+    for (var x = 0; x < gridSize; x++) {
+      gameState[x] = [];
+      for (var y = 0; y < gridSize; y++) {
+        gameState[x][y] = [];
+        for (var z = 0; z < gridSize; z++) {
+          // Initialize each cell randomly (alive or dead)
+          gameState[x][y][z] = Math.random() < 0.25 ? 1 : 0;
+        }
+      }
+    }
+  }
+
+  function countNeighbors(x, y, z) {
+    let count = 0;
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dz = -1; dz <= 1; dz++) {
+          if (dx === 0 && dy === 0 && dz === 0) continue;
+          
+          let nx = (x + dx + gridSize) % gridSize;
+          let ny = (y + dy + gridSize) % gridSize;
+          let nz = (z + dz + gridSize) % gridSize;
+          
+          count += gameState[nx][ny][nz];
+        }
+      }
+    }
+    return count;
+  }
+
+  function updateGameState() {
+    let newState = JSON.parse(JSON.stringify(gameState)); // Deep copy
+    for (let x = 0; x < gridSize; x++) {
+      for (let y = 0; y < gridSize; y++) {
+        for (let z = 0; z < gridSize; z++) {
+          let neighbors = countNeighbors(x, y, z);
+          if (gameState[x][y][z] === 1) {
+            // Cell is alive
+            if (neighbors < 5 || neighbors > 7) {
+              newState[x][y][z] = 0; // Cell dies
+            }
+          } else {
+            // Cell is dead
+            if (neighbors === 6 || neighbors === 6) {
+              newState[x][y][z] = 1; // Cell becomes alive
+            }
+          }
+        }
+      }
+    }
+  
+    gameState = newState;
+  }
 
 function handleKeyDown(event) {
     switch(event.key) {
@@ -171,32 +231,35 @@ function render()
 {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    // Calculate camera position
-    var cameraRadius = 5.0;
-    //var theta = radians(spinY);
-    //var phi = radians(spinX);
-
-    var theta = cameraAngle;            // Horizontal angle
+    var cameraRadius = 25.0;
+    var theta = cameraAngle;  
     var phi = cameraElevation;
-
-    /*eye[0] = radius * Math.sin(theta) * Math.cos(phi);
-    eye[1] = radius * Math.sin(phi);
-    eye[2] = radius * Math.cos(theta) * Math.cos(phi);*/
 
     eye[0] = cameraRadius * Math.cos(phi) * Math.sin(theta);  // X-coordinate
     eye[1] = cameraRadius * Math.sin(phi);                    // Y-coordinate (vertical movement)
     eye[2] = cameraRadius * Math.cos(phi) * Math.cos(theta);  // Z-coordinate
 
     at = vec3(0, 0, 0);
-    //at = vec3(-eye[0] * 0.5, -eye[1] * 0.5, -eye[2] * 0.5);
-
-    // Create view matrix
     var mv = lookAt(eye, at, up);
 
-    //mv = mult( mv, translate(0, 0, -5) );
-    
-    gl.uniformMatrix4fv(matrixLoc, false, flatten(mv));
-    gl.drawArrays(gl.TRIANGLES, 0, numVertices);
+    for (let x = 0; x < gridSize; x++) {
+        for (let y = 0; y < gridSize; y++) {
+            for (let z = 0; z < gridSize; z++) {
+                if (gameState[x][y][z] === 1) {
+                    // Cell is alive, render a cube
+                    var cellMv = mult(mv, translate(x - gridSize/2 + 0.5, y - gridSize/2 + 0.5, z - gridSize/2 + 0.5));
+                    cellMv = mult(cellMv, scalem(0.9, 0.9, 0.9));
+                    gl.uniformMatrix4fv(matrixLoc, false, flatten(cellMv));
+                    gl.drawArrays(gl.TRIANGLES, 0, 36); // 36 vertices for a cube (6 faces * 2 triangles * 3 vertices)
+                }
+            }
+        }
+    }
 
     requestAnimFrame(render);
+}
+
+function gameLoop() {
+    updateGameState();
+    setTimeout(gameLoop, 750);
 }
