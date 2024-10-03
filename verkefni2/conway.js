@@ -2,7 +2,6 @@ var canvas;
 var gl;
 
 var numVertices  = 36;
-
 var points = [];
 var colors = [];
 
@@ -12,11 +11,14 @@ var spinY = 0;
 var origX;
 var origY;
 
+var isDragging = false;
+var lastMouseX, lastMouseY;
+
 var matrixLoc;
 
 var cameraAngle = 0;       // Horizontal camera angle (azimuth)
 var cameraElevation = 0;   // Vertical camera angle (elevation)
-var cameraRadius = 10;
+var cameraRadius = 100;
 
 
 var eye = vec3(0, 0, 5);
@@ -31,7 +33,10 @@ var  aspect;
 var gameState = [];
 var numberCells = 0;
 var activeCellsCount = 0;
-const gridSize = 10;
+const gridSize = 12;
+
+var light = vec3(0.0, 2.0, 0.0);
+var m;
 
 window.onload = function init()
 {
@@ -41,6 +46,9 @@ window.onload = function init()
     if ( !gl ) { alert( "WebGL isn't available" ); }
 
     colorCube();
+    m = mat4();
+    m[3][3] = 0;
+    m[3][1] = -1/light[1];
 
     gl.viewport( 0, 0, canvas.width, canvas.height );
     gl.clearColor( 0.0, 0.0, 0.02, 0.02 );
@@ -76,7 +84,7 @@ window.onload = function init()
 
     //matrixLoc = gl.getUniformLocation( program, "transform" );
     matrixLoc = gl.getUniformLocation( program, "modelViewMat" );
-
+    /*
     //event listeners for mouse
     canvas.addEventListener("mousedown", function(e){
         movement = true;
@@ -96,12 +104,110 @@ window.onload = function init()
             origX = e.offsetX;
             origY = e.offsetY;
         }
+    });*/
+
+    canvas.addEventListener("mousedown", function(e) {
+        isDragging = true;
+        lastMouseX = e.offsetX;
+        lastMouseY = e.offsetY;
+        console.log("Mouse Down:", lastMouseX, lastMouseY);
+    });
+    
+    // Add mouse up event listener
+    canvas.addEventListener("mouseup", function(e) {
+        isDragging = false;
+        console.log("Mouse Up");
+    });
+    
+    // Add mouse move event listener
+    canvas.addEventListener("mousemove", function(e) {
+        if (isDragging) {
+            let dx = e.offsetX - lastMouseX;
+            let dy = e.offsetY - lastMouseY;
+    
+            // Update camera angles based on mouse movement
+            cameraAngle += dx * 0.01; // Adjust sensitivity as needed
+            cameraElevation -= dy * 0.01; // Invert elevation for typical behavior
+    
+            // Clamp elevation to avoid flipping the camera
+            cameraElevation = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, cameraElevation));
+    
+            lastMouseX = e.offsetX;
+            lastMouseY = e.offsetY;
+    
+            console.log("Camera Angle:", cameraAngle, "Elevation:", cameraElevation);
+        }
+    });
+    
+    // Add mouse wheel event listener for zooming
+    canvas.addEventListener("wheel", function(e) {
+        e.preventDefault(); // Prevent the page from scrolling
+        cameraRadius += e.deltaY * 0.01; // Adjust sensitivity as needed
+        cameraRadius = Math.max(1, Math.min(100, cameraRadius)); // Clamp the radius to prevent extreme zoom
+    
+        console.log("Camera Radius:", cameraRadius);
     });
     
     window.addEventListener("keydown", handleKeyDown);
     initializeGameState();
     render();
     gameLoop();
+}
+
+function render() {
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    //var cameraRadius = 100.0;
+    var theta = cameraAngle;  
+    var phi = cameraElevation;
+
+    eye[0] = cameraRadius * Math.cos(phi) * Math.sin(theta);
+    eye[1] = cameraRadius * Math.sin(phi);
+    eye[2] = cameraRadius * Math.cos(phi) * Math.cos(theta);
+
+    at = vec3(0, 0, 0);
+    var mv = lookAt(eye, at, up);
+
+    // Cube scaling based on active cells
+    let maxCubeScale = 3;  // Max size when there are close to 300 active cubes
+    let minCubeScale = 0.5;  // Min size when there are no active cubes
+    let scaleFactor = minCubeScale + (maxCubeScale - minCubeScale) * (activeCellsCount / 300); // Calculate scale factor for cubes
+
+    // Grid size scaling based on active cells
+    let maxGridSize = 3;  // Maximum distance between cubes when many are active
+    let minGridSize = 0.05;   // Minimum distance between cubes when few are active
+    let gridSizeScale = minGridSize + (maxGridSize - minGridSize) * (activeCellsCount / 300); // Calculate scale factor for grid spacing
+
+    for (let x = 0; x < gridSize; x++) {
+        for (let y = 0; y < gridSize; y++) {
+            for (let z = 0; z < gridSize; z++) {
+                if (gameState[x][y][z] === 1) {
+                    // Cell is alive, render a cube
+                    var cellMv = mult(mv, translate(
+                        (x - gridSize / 2 + 0.5) * gridSizeScale, // Scale x position
+                        (y - gridSize / 2 + 0.5) * gridSizeScale, // Scale y position
+                        (z - gridSize / 2 + 0.5) * gridSizeScale  // Scale z position
+                    ));
+                    cellMv = mult(cellMv, scalem(scaleFactor, scaleFactor, scaleFactor)); // Scale based on the active cubes
+                    gl.uniformMatrix4fv(matrixLoc, false, flatten(cellMv));
+                    gl.drawArrays(gl.TRIANGLES, 0, 36); // 36 vertices for a cube (6 faces * 2 triangles * 3 vertices)
+                }
+            }
+        }
+    }
+
+    
+    mv = mult(mv, translate(light[0], light[1], light[2]));
+    mv = mult(mv, m);
+    mv = mult(mv, translate(-light[0], -light[1], -light[2]));
+
+    requestAnimFrame(render);
+}
+
+
+function gameLoop() {   
+    updateGameState();
+    setTimeout(gameLoop, 750);
 }
 
 function initializeGameState() {
@@ -119,24 +225,6 @@ function initializeGameState() {
       }
     }
     console.log("first: "+activeCellsCount);
-  }
-
-function countNeighbors(x, y, z) {
-  let count = 0;
-  for (let dx = -1; dx <= 1; dx++) {
-    for (let dy = -1; dy <= 1; dy++) {
-      for (let dz = -1; dz <= 1; dz++) {
-        if (dx === 0 && dy === 0 && dz === 0) continue;
-        
-        let nx = (x + dx + gridSize) % gridSize;
-        let ny = (y + dy + gridSize) % gridSize;
-        let nz = (z + dz + gridSize) % gridSize;
-        
-        count += gameState[nx][ny][nz];
-      }
-    }
-  }
-  return count;
 }
 
 function updateGameState() {
@@ -168,6 +256,24 @@ function updateGameState() {
     gameState = newState;
     activeCellsCount = newActiveCellsCount; // Update the global count
     console.log("Active cubes: " + activeCellsCount); // Log the count for reference
+}
+
+function countNeighbors(x, y, z) {
+  let count = 0;
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        if (dx === 0 && dy === 0 && dz === 0) continue;
+        
+        let nx = (x + dx + gridSize) % gridSize;
+        let ny = (y + dy + gridSize) % gridSize;
+        let nz = (z + dz + gridSize) % gridSize;
+        
+        count += gameState[nx][ny][nz];
+      }
+    }
+  }
+  return count;
 }
 
 function handleKeyDown(event) {
@@ -234,50 +340,6 @@ function quad(a, b, c, d)
 
     for ( var i = 0; i < indices.length; ++i ) {
         points.push( vertices[indices[i]] );
-        colors.push(vertexColors[a]);
-        
+        colors.push(vertexColors[a]);      
     }
-}
-
-function render()
-{
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-    var cameraRadius = 25.0;
-    var theta = cameraAngle;  
-    var phi = cameraElevation;
-
-    eye[0] = cameraRadius * Math.cos(phi) * Math.sin(theta);  // X-coordinate
-    eye[1] = cameraRadius * Math.sin(phi);                    // Y-coordinate (vertical movement)
-    eye[2] = cameraRadius * Math.cos(phi) * Math.cos(theta);  // Z-coordinate
-
-    at = vec3(0, 0, 0);
-    var mv = lookAt(eye, at, up);
-
-    let maxScale = 3;  // Max size when there are few active cubes
-    let minScale = 0.01;  // Min size when there are many active cubes
-    let scaleFactor = minScale + (maxScale - minScale) * (activeCellsCount / 300);
-    console.log("sf: "+scaleFactor);
-
-    for (let x = 0; x < gridSize; x++) {
-        for (let y = 0; y < gridSize; y++) {
-            for (let z = 0; z < gridSize; z++) {
-                if (gameState[x][y][z] === 1) {
-                    // Cell is alive, render a cube
-                    var cellMv = mult(mv, translate(x - gridSize/2 + 0.5, y - gridSize/2 + 0.5, z - gridSize/2 + 0.5));
-                    //cellMv = mult(cellMv, scalem(0.9, 0.9, 0.9));
-                    cellMv = mult(cellMv, scalem(scaleFactor, scaleFactor, scaleFactor)); // Scale based on the active cubes
-                    gl.uniformMatrix4fv(matrixLoc, false, flatten(cellMv));
-                    gl.drawArrays(gl.TRIANGLES, 0, 36); // 36 vertices for a cube (6 faces * 2 triangles * 3 vertices)
-                }
-            }
-        }
-    }
-
-    requestAnimFrame(render);
-}
-
-function gameLoop() {   
-    updateGameState();
-    setTimeout(gameLoop, 750);
 }
