@@ -30,6 +30,7 @@ var  aspect;
 
 var gameState = [];
 var numberCells = 0;
+var activeCellsCount = 0;
 const gridSize = 10;
 
 window.onload = function init()
@@ -99,8 +100,8 @@ window.onload = function init()
     
     window.addEventListener("keydown", handleKeyDown);
     initializeGameState();
-    gameLoop();
     render();
+    gameLoop();
 }
 
 function initializeGameState() {
@@ -111,31 +112,37 @@ function initializeGameState() {
         for (var z = 0; z < gridSize; z++) {
           // Initialize each cell randomly (alive or dead)
           gameState[x][y][z] = Math.random() < 0.25 ? 1 : 0;
+          if(gameState[x][y][z] === 1){
+            activeCellsCount++;
+          }
         }
       }
     }
+    console.log("first: "+activeCellsCount);
   }
 
-  function countNeighbors(x, y, z) {
-    let count = 0;
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dy = -1; dy <= 1; dy++) {
-        for (let dz = -1; dz <= 1; dz++) {
-          if (dx === 0 && dy === 0 && dz === 0) continue;
-          
-          let nx = (x + dx + gridSize) % gridSize;
-          let ny = (y + dy + gridSize) % gridSize;
-          let nz = (z + dz + gridSize) % gridSize;
-          
-          count += gameState[nx][ny][nz];
-        }
+function countNeighbors(x, y, z) {
+  let count = 0;
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        if (dx === 0 && dy === 0 && dz === 0) continue;
+        
+        let nx = (x + dx + gridSize) % gridSize;
+        let ny = (y + dy + gridSize) % gridSize;
+        let nz = (z + dz + gridSize) % gridSize;
+        
+        count += gameState[nx][ny][nz];
       }
     }
-    return count;
   }
+  return count;
+}
 
-  function updateGameState() {
+function updateGameState() {
     let newState = JSON.parse(JSON.stringify(gameState)); // Deep copy
+    let newActiveCellsCount = 0; // Temporary count for this update
+
     for (let x = 0; x < gridSize; x++) {
       for (let y = 0; y < gridSize; y++) {
         for (let z = 0; z < gridSize; z++) {
@@ -144,19 +151,24 @@ function initializeGameState() {
             // Cell is alive
             if (neighbors < 5 || neighbors > 7) {
               newState[x][y][z] = 0; // Cell dies
+            } else {
+              newActiveCellsCount++; // Still alive
             }
           } else {
             // Cell is dead
-            if (neighbors === 6 || neighbors === 6) {
+            if (neighbors === 6) {
               newState[x][y][z] = 1; // Cell becomes alive
+              newActiveCellsCount++; // Now alive
             }
           }
         }
       }
     }
-  
+
     gameState = newState;
-  }
+    activeCellsCount = newActiveCellsCount; // Update the global count
+    console.log("Active cubes: " + activeCellsCount); // Log the count for reference
+}
 
 function handleKeyDown(event) {
     switch(event.key) {
@@ -242,13 +254,19 @@ function render()
     at = vec3(0, 0, 0);
     var mv = lookAt(eye, at, up);
 
+    let maxScale = 3;  // Max size when there are few active cubes
+    let minScale = 0.01;  // Min size when there are many active cubes
+    let scaleFactor = minScale + (maxScale - minScale) * (activeCellsCount / 300);
+    console.log("sf: "+scaleFactor);
+
     for (let x = 0; x < gridSize; x++) {
         for (let y = 0; y < gridSize; y++) {
             for (let z = 0; z < gridSize; z++) {
                 if (gameState[x][y][z] === 1) {
                     // Cell is alive, render a cube
                     var cellMv = mult(mv, translate(x - gridSize/2 + 0.5, y - gridSize/2 + 0.5, z - gridSize/2 + 0.5));
-                    cellMv = mult(cellMv, scalem(0.9, 0.9, 0.9));
+                    //cellMv = mult(cellMv, scalem(0.9, 0.9, 0.9));
+                    cellMv = mult(cellMv, scalem(scaleFactor, scaleFactor, scaleFactor)); // Scale based on the active cubes
                     gl.uniformMatrix4fv(matrixLoc, false, flatten(cellMv));
                     gl.drawArrays(gl.TRIANGLES, 0, 36); // 36 vertices for a cube (6 faces * 2 triangles * 3 vertices)
                 }
@@ -259,7 +277,7 @@ function render()
     requestAnimFrame(render);
 }
 
-function gameLoop() {
+function gameLoop() {   
     updateGameState();
     setTimeout(gameLoop, 750);
 }
