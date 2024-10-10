@@ -26,7 +26,7 @@ var at = vec3(0, 0, 0);
 var up = vec3(0, 1, 0);
 
 var near = 0.3;
-var far = 100.0;
+var far = 200.0;
 var  fovy = 45.0;        // Field-of-view in Y direction angle (in degrees)
 var  aspect;
 
@@ -84,27 +84,6 @@ window.onload = function init()
 
     //matrixLoc = gl.getUniformLocation( program, "transform" );
     matrixLoc = gl.getUniformLocation( program, "modelViewMat" );
-    /*
-    //event listeners for mouse
-    canvas.addEventListener("mousedown", function(e){
-        movement = true;
-        origX = e.offsetX;
-        origY = e.offsetY;
-        e.preventDefault();
-    });
-    
-    canvas.addEventListener("mouseup", function(e){
-        movement = false;
-    });
-    
-    canvas.addEventListener("mousemove", function(e){
-        if(movement) {
-            spinY = (spinY + (e.offsetX - origX) * 0.5) % 360;
-            spinX = Math.max(-60, Math.min(60, spinX + (e.offsetY - origY) * 0.5));
-            origX = e.offsetX;
-            origY = e.offsetY;
-        }
-    });*/
 
     canvas.addEventListener("mousedown", function(e) {
         isDragging = true;
@@ -175,7 +154,7 @@ function render() {
 
     // Grid size scaling based on active cells
     let maxGridSize = 3;  // Maximum distance between cubes when many are active
-    let minGridSize = 0.05;   // Minimum distance between cubes when few are active
+    let minGridSize = 1;   // Minimum distance between cubes when few are active
     let gridSizeScale = minGridSize + (maxGridSize - minGridSize) * (activeCellsCount / 300); // Calculate scale factor for grid spacing
 
     for (let x = 0; x < gridSize; x++) {
