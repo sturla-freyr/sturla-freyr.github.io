@@ -16,9 +16,10 @@ var lastMouseX, lastMouseY;
 
 var matrixLoc;
 
-var cameraAngle = 0;       // Horizontal camera angle (azimuth)
-var cameraElevation = 0;   // Vertical camera angle (elevation)
-var cameraRadius = 100;
+var cameraAngle = 0.5;       // Horizontal camera angle (azimuth)
+var cameraElevation = 0.5;   // Vertical camera angle (elevation)
+var cameraRadius = 1200;
+const maxCameraRadius = cameraRadius;
 
 
 var eye = vec3(0, 0, 5);
@@ -26,14 +27,14 @@ var at = vec3(0, 0, 0);
 var up = vec3(0, 1, 0);
 
 var near = 0.3;
-var far = 200.0;
+var far = 500000.0;
 var  fovy = 45.0;        // Field-of-view in Y direction angle (in degrees)
 var  aspect;
 
 var gameState = [];
 var numberCells = 0;
 var activeCellsCount = 0;
-const gridSize = 12;
+const gridSize = 30;
 
 var light = vec3(0.0, 2.0, 0.0);
 var m;
@@ -121,8 +122,8 @@ window.onload = function init()
     // Add mouse wheel event listener for zooming
     canvas.addEventListener("wheel", function(e) {
         e.preventDefault(); // Prevent the page from scrolling
-        cameraRadius += e.deltaY * 0.01; // Adjust sensitivity as needed
-        cameraRadius = Math.max(1, Math.min(100, cameraRadius)); // Clamp the radius to prevent extreme zoom
+        cameraRadius += e.deltaY * 0.1; // Adjust sensitivity as needed
+        cameraRadius = Math.max(1, Math.min(maxCameraRadius, cameraRadius)); // Clamp the radius to prevent extreme zoom
     
         console.log("Camera Radius:", cameraRadius);
     });
@@ -150,12 +151,12 @@ function render() {
     // Cube scaling based on active cells
     let maxCubeScale = 3;  // Max size when there are close to 300 active cubes
     let minCubeScale = 0.5;  // Min size when there are no active cubes
-    let scaleFactor = minCubeScale + (maxCubeScale - minCubeScale) * (activeCellsCount / 300); // Calculate scale factor for cubes
+    let scaleFactor = minCubeScale + (maxCubeScale - minCubeScale) * (activeCellsCount / 1000); // Calculate scale factor for cubes
 
     // Grid size scaling based on active cells
     let maxGridSize = 3;  // Maximum distance between cubes when many are active
     let minGridSize = 1;   // Minimum distance between cubes when few are active
-    let gridSizeScale = minGridSize + (maxGridSize - minGridSize) * (activeCellsCount / 300); // Calculate scale factor for grid spacing
+    let gridSizeScale = minGridSize + (maxGridSize - minGridSize) * (activeCellsCount / 1000); // Calculate scale factor for grid spacing
 
     for (let x = 0; x < gridSize; x++) {
         for (let y = 0; y < gridSize; y++) {
