@@ -2,6 +2,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+<link rel="stylesheet" href="styles.css" />
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
 <title>Conway's Game of Life</title>
 
@@ -38,9 +39,19 @@ void main()
 </head>
 
 <body>
-<canvas id="gl-canvas" width="512" height="512">
-Oops ... your browser doesn't support the HTML5 canvas element
-</canvas>
-<li><a href="../index.html">Homepage</a></li>
+<div id="game-container">
+    <div class="canvas-wrapper">
+        <canvas id="gl-canvas" width="512" height="512">
+        Oops ... your browser doesn't support the HTML5 canvas element
+        </canvas>
+    </div>
+    <ul id="info">
+        <li><p>W,A,S,D, or mousedown to move camera</p></li>
+        <li><p>Scroll to zoom</p></li>
+        <li><p><strong>Spacebar to pause!</strong></p></li>
+    </ul>
+
+    <li><a href="../index.html">Homepage</a></li>
+</div>
 </body>
 </html>
