@@ -16,8 +16,8 @@ var lastMouseX, lastMouseY;
 
 var matrixLoc;
 
-var cameraAngle = 0.5;       // Horizontal camera angle (azimuth)
-var cameraElevation = 0.5;   // Vertical camera angle (elevation)
+var cameraAngle = 0.72;       // Horizontal camera angle (azimuth)
+var cameraElevation = -0.52;   // Vertical camera angle (elevation)
 var cameraRadius = 1200;
 const maxCameraRadius = cameraRadius;
 
@@ -35,6 +35,7 @@ var gameState = [];
 var numberCells = 0;
 var activeCellsCount = 0;
 const gridSize = 30;
+var isGamePaused = false;
 
 var light = vec3(0.0, 2.0, 0.0);
 var m;
@@ -137,7 +138,6 @@ window.onload = function init()
 function render() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    //var cameraRadius = 100.0;
     var theta = cameraAngle;  
     var phi = cameraElevation;
 
@@ -186,8 +186,10 @@ function render() {
 
 
 function gameLoop() {   
-    updateGameState();
-    setTimeout(gameLoop, 750);
+  if (!isGamePaused) {
+      updateGameState();
+  }
+  setTimeout(gameLoop, 750);
 }
 
 function initializeGameState() {
@@ -278,6 +280,11 @@ function handleKeyDown(event) {
             // Rotate camera downwards
             cameraElevation = Math.max(cameraElevation - 0.1, -Math.PI / 2); // Clamp to -90 degrees min
             break;
+        case ' ':
+          // Toggle pause state when spacebar is pressed
+          isGamePaused = !isGamePaused;
+          console.log(isGamePaused ? "Game Paused" : "Game Resumed");
+          break;
     }
 }
 
