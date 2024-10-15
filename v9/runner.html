@@ -1,0 +1,66 @@
+
+<html>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
+
+
+<script id="vertex-shader" type="x-shader/x-vertex">
+
+attribute  vec4 vPosition;
+attribute vec4 vColor;
+varying vec4 fColor;
+
+uniform mat4 modelViewMatrix;
+uniform mat4 projectionMatrix;
+
+void main()
+{
+    fColor = vColor;
+    gl_Position = projectionMatrix * modelViewMatrix * vPosition;
+}
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+
+precision mediump float;
+
+varying vec4 fColor;
+
+void main()
+{
+    gl_FragColor = fColor;
+
+}
+</script>
+
+<script type="text/javascript" src="../Common/webgl-utils.js"></script>
+<script type="text/javascript" src="../Common/initShaders.js"></script>
+<script type="text/javascript" src="../Common/MV.js"></script>
+<script type="text/javascript" src="figureHH-col.js"></script>
+
+<body>
+Velja virkan líkamshluta með hnöppum, hreyfa hann með upp/niður örvum.
+<table style="width:100%">
+  <tr>
+    <td>
+	<canvas id="gl-canvas" width="600" height="600">
+    </td>
+
+    <td>
+        <button id = "btnTorso">Torso angle</button><p></p>
+        <button id = "btnHead2">Head2 angle</button><p></p>
+        <button id = "btnHead1">Head1 angle</button><p></p>
+        <button id = "btnLeftUpperArm">Left upper arm angle</button><p></p>
+        <button id = "btnLeftLowerArm">Left lower arm angle</button><p></p>
+        <button id = "btnRightUpperArm">Right upper arm angle</button><p></p>
+        <button id = "btnRightLowerArm">Right lower arm angle</button><p></p>
+        <button id = "btnLeftUpperLeg">Left upper leg angle</button><p></p>
+        <button id = "btnLeftLowerLeg">Left lower leg angle</button><p></p>
+        <button id = "btnRightUpperLeg">Right upper leg angle</button><p></p>
+        <button id = "btnRightLowerLeg">Right lower leg angle</button><p></p>
+        Current angle: <div id="currAngle"></div>
+    </td>
+  </tr>
+</table>
+<li><a href="../index.html">Homepage</a></li>
+</body>
+</html>
