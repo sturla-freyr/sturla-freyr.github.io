@@ -100,6 +100,8 @@ var colorsArray = [];
 
 var legAngle = 0;
 var legSpeed = 2
+var armAngle = 180;
+var armSpeed = 2
 //-------------------------------------------
 
 function scale4(a, b, c) {
@@ -479,6 +481,7 @@ window.onload = function init() {
          }
      }  );  
        
+    animateArms();
     animateLegs();
     render();
 }
@@ -520,6 +523,44 @@ function animateLegs() {
     initNodes(rightLowerLegId);
 
     requestAnimationFrame(animateLegs);
+}
+
+function animateArms() {
+    armAngle = (armAngle + armSpeed) % 360;
+    var upperArmRotation = 45 * Math.sin(radians(armAngle));
+
+    // Update upper arm angles
+    theta[leftUpperArmId] = 180 - upperArmRotation;
+    theta[rightUpperArmId] = 180 + upperArmRotation; 
+
+    // Calculate lower arm angles with forward bending
+    var bendThreshold = 5.5;
+    var bendFactor = 1.25;
+
+    function calculateLowerArmRotation(upperRotation) {
+        if (upperRotation < -bendThreshold) {
+            return 0;
+        } else {
+
+            var bendRange = 45 - bendThreshold;
+            var currentBend = upperRotation + bendThreshold;
+            var bendPercentage = currentBend / bendRange;
+            return Math.max(0, bendPercentage * 40);
+        }
+    }
+
+    var leftLowerArmRotation = calculateLowerArmRotation(-upperArmRotation);
+    var rightLowerArmRotation = calculateLowerArmRotation(upperArmRotation);
+
+    theta[leftLowerArmId] = leftLowerArmRotation;
+    theta[rightLowerArmId] = rightLowerArmRotation;
+
+    initNodes(leftUpperArmId);
+    initNodes(rightUpperArmId);
+    initNodes(leftLowerArmId);
+    initNodes(rightLowerArmId);
+
+    requestAnimationFrame(animateArms);
 }
 
 var render = function() {
