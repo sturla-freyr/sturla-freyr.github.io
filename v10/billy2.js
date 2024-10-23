@@ -178,78 +178,78 @@ function quad(a, b, c, d, n)
         
     }
 }
-function render()
-{
+function render() {
     gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     mv = lookAt( vec3(0.0, 0.0, zDist), at, up );
     mv = mult( mv, rotateX( spinX ) );
     mv = mult( mv, rotateY( spinY ) );
 
-    normalMatrix = [
-        vec3(mv[0][0], mv[0][1], mv[0][2]),
-        vec3(mv[1][0], mv[1][1], mv[1][2]),
-        vec3(mv[2][0], mv[2][1], mv[2][2])
-    ];
-	normalMatrix.matrix = true;
+    // Helper function to update normal matrix and uniforms for each piece
+    function drawPiece(modelView) {
+        // Calculate normal matrix from the modelView matrix
+        normalMatrix = [
+            vec3(modelView[0][0], modelView[0][1], modelView[0][2]),
+            vec3(modelView[1][0], modelView[1][1], modelView[1][2]),
+            vec3(modelView[2][0], modelView[2][1], modelView[2][2])
+        ];
+        
+        // Important: Transpose-inverse for correct normal transformation
+        normalMatrix = inverse(normalMatrix);
+        normalMatrix = transpose(normalMatrix);
+        normalMatrix.matrix = true;
 
-    gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(mv));
-    gl.uniformMatrix4fv(projectionMatrixLoc, false, flatten(projectionMatrix));
-    gl.uniformMatrix3fv(normalMatrixLoc, false, flatten(normalMatrix));
+        gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(modelView));
+        gl.uniformMatrix4fv(projectionMatrixLoc, false, flatten(projectionMatrix));
+        gl.uniformMatrix3fv(normalMatrixLoc, false, flatten(normalMatrix));
+        gl.drawArrays(gl.TRIANGLES, 0, numVertices);
+    }
 
-    // First the right wall
-    mv1 = mult( mv, translate( -0.5, 0.0, 0.0 ) );
-    mv1 = mult( mv1, scalem( 0.025, 1.0, 0.5 ) );
-    mv1 = mult( mv1, rotateY(270) );
-    gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(mv1));
-    gl.drawArrays( gl.TRIANGLES, 0, numVertices );
+    // Right wall
+    let mv1 = mult(mv, translate(-0.5, 0.0, 0.0));
+    mv1 = mult(mv1, scalem(0.025, 1.0, 0.5));
+    mv1 = mult(mv1, rotateY(270));
+    drawPiece(mv1);
 
-    // Then the left wall
-    mv1 = mult( mv, translate( 0.5, 0.0, 0.0 ) );
-    mv1 = mult( mv1, scalem( 0.025, 1.0, 0.5 ) );
-    mv1 = mult( mv1, rotateX(270) );
-    gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(mv1));
-    gl.drawArrays( gl.TRIANGLES, 0, numVertices );
+    // Left wall
+    mv1 = mult(mv, translate(0.5, 0.0, 0.0));
+    mv1 = mult(mv1, scalem(0.025, 1.0, 0.5));
+    mv1 = mult(mv1, rotateX(270));
+    drawPiece(mv1);
 
     // Top
-    mv1 = mult( mv, translate( 0.0, 0.5, 0.0 ) );
-    mv1 = mult( mv1, scalem( 1.025, 0.025, 0.5 ) );
-    gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(mv1));
-    gl.drawArrays( gl.TRIANGLES, 0, numVertices );
+    mv1 = mult(mv, translate(0.0, 0.5, 0.0));
+    mv1 = mult(mv1, scalem(1.025, 0.025, 0.5));
+    drawPiece(mv1);
 
     // Shelves
-    mv1 = mult( mv, translate( 0.0, 0.2, 0.0 ) );
-    mv1 = mult( mv1, scalem( 0.975, 0.025, 0.5 ) );
-    mv1 = mult( mv1, rotateY(180) );
-    gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(mv1));
-    gl.drawArrays( gl.TRIANGLES, 0, numVertices );
+    mv1 = mult(mv, translate(0.0, 0.2, 0.0));
+    mv1 = mult(mv1, scalem(0.975, 0.025, 0.5));
+    mv1 = mult(mv1, rotateY(180));
+    drawPiece(mv1);
 
-    mv1 = mult( mv, translate( 0.0, -0.1, 0.0 ) );
-    mv1 = mult( mv1, scalem( 0.975, 0.025, 0.5 ) );
-    mv1 = mult( mv1, rotateY(180) );
-    gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(mv1));
-    gl.drawArrays( gl.TRIANGLES, 0, numVertices );
+    mv1 = mult(mv, translate(0.0, -0.1, 0.0));
+    mv1 = mult(mv1, scalem(0.975, 0.025, 0.5));
+    mv1 = mult(mv1, rotateY(180));
+    drawPiece(mv1);
 
-    mv1 = mult( mv, translate( 0.0, -0.4, 0.0 ) );
-    mv1 = mult( mv1, scalem( 0.975, 0.025, 0.5 ) );
-    mv1 = mult( mv1, rotateY(180) );
-    gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(mv1));
-    gl.drawArrays( gl.TRIANGLES, 0, numVertices );
+    mv1 = mult(mv, translate(0.0, -0.4, 0.0));
+    mv1 = mult(mv1, scalem(0.975, 0.025, 0.5));
+    mv1 = mult(mv1, rotateY(180));
+    drawPiece(mv1);
 
     // Back
-    mv1 = mult( mv, translate( 0.0, 0.0125, 0.25 ) );
-    mv1 = mult( mv1, scalem( 1.025, 1.0, 0.01 ) );
-    mv1 = mult( mv1, rotateY(90) );
-    gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(mv1));
-    gl.drawArrays( gl.TRIANGLES, 0, numVertices );
+    mv1 = mult(mv, translate(0.0, 0.0125, 0.25));
+    mv1 = mult(mv1, scalem(1.025, 1.0, 0.01));
+    mv1 = mult(mv1, rotateY(90));
+    drawPiece(mv1);
 
     // Bottom
-    mv1 = mult( mv, translate( 0.0, -0.45, 0.025 ) );
-    mv1 = mult( mv1, scalem( 0.975, 0.1, 0.45 ) );
-    mv1 = mult( mv1, rotateY(180) );
-    mv1 = mult( mv1, rotateX(270) );
-    gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(mv1));
-    gl.drawArrays( gl.TRIANGLES, 0, numVertices );
+    mv1 = mult(mv, translate(0.0, -0.45, 0.025));
+    mv1 = mult(mv1, scalem(0.975, 0.1, 0.45));
+    mv1 = mult(mv1, rotateY(180));
+    mv1 = mult(mv1, rotateX(270));
+    drawPiece(mv1);
 
-    requestAnimFrame( render );
+    requestAnimFrame(render);
 }
