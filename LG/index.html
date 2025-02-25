@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MovieMind - AI Movie Recommendations</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            color: white;
+        }
+
+        header {
+            background-color: #ff4d4d;
+            padding: 1rem;
+            text-align: center;
+            position: relative; /* For absolute positioning of hamburger */
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 3rem;
+        }
+
+        .chat-container {
+            background-color: #2d2d2d;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 2rem;
+            height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .message {
+            margin: 1rem 0;
+            padding: 1rem;
+            border-radius: 5px;
+        }
+
+        .ai-message {
+            background-color: #ff4d4d;
+            margin-right: 20%;
+        }
+
+        .user-message {
+            background-color: #404040;
+            margin-left: 20%;
+        }
+
+        .chat-input {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            padding: 0.5rem;
+            border: none;
+            border-radius: 5px;
+            background-color: #404040;
+            color: white;
+        }
+
+        button {
+            padding: 0.5rem 1rem;
+            background-color: #ff4d4d;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+        }
+
+        .movie-section {
+            margin-bottom: 3rem;
+            position: relative;
+            overflow: hidden; /* Ensure content doesn't spill */
+        }
+
+        .movie-section h2 {
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            color: #ff4d4d;
+            border-left: 4px solid #ff4d4d;
+            padding-left: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .featured-movies {
+            display: flex;
+            gap: 1.5rem;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            padding: 1rem 0;
+            position: relative;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .movie-track {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: nowrap;
+        }
+
+        .scroll-area {
+            display: none;
+        }
+
+        .movie-card {
+            flex: 0 0 200px; /* Fixed width for cards */
+            max-width: 200px;
+        }
+
+        .movie-card img {
+            height: 250px; /* Smaller height */
+        }
+
+        /* Carousel Navigation Buttons */
+        .carousel-button {
+            display: none;
+        }
+
+        /* Optional: Add hover effect to movie cards */
+        .movie-card {
+            transition: transform 0.2s ease-in-out;
+        }
+
+        .movie-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(255, 77, 77, 0.3);
+        }
+
+        /* New styles for the chat widget and overlay */
+        .chat-widget-button {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #ff4d4d;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .chat-widget-button svg {
+            width: 30px;
+            height: 30px;
+            fill: white;
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+        }
+
+        .dialog {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 600px;
+            background-color: #1a1a1a;
+            border-radius: 10px;
+            z-index: 1001;
+        }
+
+        .dialog-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid #404040;
+        }
+
+        .close-button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .dialog .chat-container {
+            margin-top: 0;
+            border-radius: 0 0 10px 10px;
+        }
+
+        /* Hamburger Menu Styles */
+        .hamburger-button {
+            position: absolute;
+            left: 2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            z-index: 100;
+        }
+
+        .hamburger-button span {
+            display: block;
+            width: 25px;
+            height: 3px;
+            background-color: white;
+            margin: 5px 0;
+            transition: 0.3s;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 300px;
+            height: 100%;
+            background-color: #2d2d2d;
+            transition: 0.3s;
+            z-index: 1000;
+            padding-top: 60px;
+        }
+
+        .sidebar.active {
+            left: 0;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar-menu li {
+            padding: 1rem 2rem;
+            border-bottom: 1px solid #404040;
+        }
+
+        .sidebar-menu a {
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .sidebar-menu svg {
+            width: 20px;
+            height: 20px;
+            fill: white;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <button class="hamburger-button" onclick="toggleSidebar()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        <h1>MovieMind</h1>
+        <p>Your AI-Powered Movie Recommendation Assistant</p>
+    </header>
+
+    <div class="container">
+        <section class="movie-section" id="trending">
+            <h2>Trending Now</h2>
+            <div class="featured-movies">
+                <div class="movie-track">
+                    <div class="movie-card">
+                        <img src="https://picsum.photos/seed/oppenheimer/200/300" alt="Movie Poster">
+                        <div class="movie-info">
+                            <h3>Oppenheimer</h3>
+                            <p>Drama, Biography • 2023</p>
+                        </div>
+                    </div>
+                    <div class="movie-card">
+                        <img src="https://picsum.photos/seed/dune/200/300" alt="Movie Poster">
+                        <div class="movie-info">
+                            <h3>Dune</h3>
+                            <p>Sci-fi, Adventure • 2021</p>
+                        </div>
+                    </div>
+                    <div class="movie-card">
+                        <img src="https://picsum.photos/seed/poorthings/200/300" alt="Movie Poster">
+                        <div class="movie-info">
+                            <h3>Poor Things</h3>
+                            <p>Drama, Comedy • 2023</p>
+                        </div>
+                    </div>
+                    <div class="movie-card">
+                        <img src="https://picsum.photos/seed/barbie/200/300" alt="Movie Poster">
+                        <div class="movie-info">
+                            <h3>Barbie</h3>
+                            <p>Comedy, Fantasy • 2023</p>
+                        </div>
+                    </div>
+                    <div class="movie-card">
+                        <img src="https://picsum.photos/seed/killers/200/300" alt="Movie Poster">
+                        <div class="movie-info">
+                            <h3>Killers of the Flower Moon</h3>
+                            <p>Crime, Drama • 2023</p>
+                        </div>
+                    </div>
+                    <div class="movie-card">
+                        <img src="https://picsum.photos/seed/oppenheimer/200/300" alt="Movie Poster">
+                        <div class="movie-info">
+                            <h3>Oppenheimer</h3>
+                            <p>Drama, Biography • 2023</p>
+                        </div>
+                    </div>
+                    <div class="movie-card">
+                        <img src="https://picsum.photos/seed/dune/200/300" alt="Movie Poster">
+                        <div class="movie-info">
+                            <h3>Dune</h3>
+                            <p>Sci-fi, Adventure • 2021</p>
+                        </div>
+                    </div>
+                    <div class="movie-card">
+                        <img src="https://picsum.photos/seed/poorthings/200/300" alt="Movie Poster">
+                        <div class="movie-info">
+                            <h3>Poor Things</h3>
+                            <p>Drama, Comedy • 2023</p>
+                        </div>
+                    </div>
+                    <div class="movie-card">
+                        <img src="https://picsum.photos/seed/barbie/200/300" alt="Movie Poster">
+                        <div class="movie-info">
+                            <h3>Barbie</h3>
+                            <p>Comedy, Fantasy • 2023</p>
+                        </div>
+                    </div>
+                    <div class="movie-card">
+                        <img src="https://picsum.photos/seed/killers/200/300" alt="Movie Poster">
+                        <div class="movie-info">
+                            <h3>Killers of the Flower Moon</h3>
+                            <p>Crime, Drama • 2023</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="movie-section" id="scifi">
+            <h2>Sci-Fi Masterpieces</h2>
+            <div class="featured-movies">
+                <div class="scroll-area left" onmouseover="startScroll(this, 'left')" onmouseout="stopScroll(this)"></div>
+                <div class="scroll-area right" onmouseover="startScroll(this, 'right')" onmouseout="stopScroll(this)"></div>
+                <div class="movie-card">
+                    <img src="https://picsum.photos/seed/arrival/200/300" alt="Movie Poster">
+                    <div class="movie-info">
+                        <h3>Arrival</h3>
+                        <p>Sci-fi, Drama • 2016</p>
+                    </div>
+                </div>
+                <div class="movie-card">
+                    <img src="https://picsum.photos/seed/bladerunner/200/300" alt="Movie Poster">
+                    <div class="movie-info">
+                        <h3>Blade Runner 2049</h3>
+                        <p>Sci-fi, Action • 2017</p>
+                    </div>
+                </div>
+                <div class="movie-card">
+                    <img src="https://picsum.photos/seed/exmachina/200/300" alt="Movie Poster">
+                    <div class="movie-info">
+                        <h3>Ex Machina</h3>
+                        <p>Sci-fi, Drama • 2014</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="movie-section">
+            <h2>Award-Winning Dramas</h2>
+            <div class="featured-movies">
+                <div class="movie-card">
+                    <img src="https://picsum.photos/seed/godfather/200/300" alt="Movie Poster">
+                    <div class="movie-info">
+                        <h3>The Godfather</h3>
+                        <p>Crime, Drama • 1972</p>
+                    </div>
+                </div>
+                <div class="movie-card">
+                    <img src="https://picsum.photos/seed/schindler/200/300" alt="Movie Poster">
+                    <div class="movie-info">
+                        <h3>Schindler's List</h3>
+                        <p>Biography, Drama • 1993</p>
+                    </div>
+                </div>
+                <div class="movie-card">
+                    <img src="https://picsum.photos/seed/shawshank/200/300" alt="Movie Poster">
+                    <div class="movie-info">
+                        <h3>The Shawshank Redemption</h3>
+                        <p>Drama • 1994</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="movie-section">
+            <h2>Must-Watch Thrillers</h2>
+            <div class="featured-movies">
+                <div class="movie-card">
+                    <img src="https://picsum.photos/seed/inception/200/300" alt="Movie Poster">
+                    <div class="movie-info">
+                        <h3>Inception</h3>
+                        <p>Sci-fi, Thriller • 2010</p>
+                    </div>
+                </div>
+                <div class="movie-card">
+                    <img src="https://picsum.photos/seed/gonegirl/200/300" alt="Movie Poster">
+                    <div class="movie-info">
+                        <h3>Gone Girl</h3>
+                        <p>Mystery, Thriller • 2014</p>
+                    </div>
+                </div>
+                <div class="movie-card">
+                    <img src="https://picsum.photos/seed/parasite/200/300" alt="Movie Poster">
+                    <div class="movie-info">
+                        <h3>Parasite</h3>
+                        <p>Thriller, Drama • 2019</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- New chat widget button -->
+    <button class="chat-widget-button" onclick="openChat()">
+        <svg viewBox="0 0 24 24">
+            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+        </svg>
+    </button>
+
+    <!-- New overlay and dialog -->
+    <div class="overlay" id="overlay">
+        <div class="dialog">
+            <div class="dialog-header">
+                <h2>MovieMind Chat</h2>
+                <button class="close-button" onclick="closeChat()">&times;</button>
+            </div>
+            <div class="chat-container">
+                <div class="chat-messages">
+                    <div class="message ai-message">
+                        Hello! I'm MovieMind, your personal movie recommendation assistant. Tell me about your movie preferences or ask for recommendations!
+                    </div>
+                    <div class="message user-message">
+                        I love sci-fi movies like Inception and Interstellar. What would you recommend?
+                    </div>
+                    <div class="message ai-message">
+                        Based on your interest in mind-bending sci-fi, I'd recommend "Arrival", "Blade Runner 2049", and "Ex Machina". These films combine stunning visuals with thought-provoking narratives.
+                    </div>
+                </div>
+                <div class="chat-input">
+                    <input type="text" placeholder="Ask for movie recommendations...">
+                    <button>Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add sidebar and overlay -->
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+    <div class="sidebar">
+        <ul class="sidebar-menu">
+            <li>
+                <a href="#">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                    Profile Settings
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/>
+                    </svg>
+                    Preferences
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/>
+                    </svg>
+                    Logout
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
+                    </svg>
+                    Help & Support
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <script>
+        function openChat() {
+            document.getElementById('overlay').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeChat() {
+            document.getElementById('overlay').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            
+            sidebar.classList.toggle('active');
+            if (sidebar.classList.contains('active')) {
+                overlay.style.display = 'block';
+                document.body.style.overflow = 'hidden';
+            } else {
+                overlay.style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }
+        }
+
+        document.querySelectorAll('.featured-movies').forEach(container => {
+            const track = container.querySelector('.movie-track');
+            
+            // Clone the movies for continuous scroll
+            const movies = track.innerHTML;
+            track.innerHTML = movies + movies;
+
+            container.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                
+                // Increase from *32 to *128 for extremely fast scrolling
+                const scrollAmount = (e.deltaY || e.deltaX) * 128;
+                container.scrollLeft += scrollAmount;
+
+                // Create infinite scroll effect
+                const maxScroll = track.scrollWidth / 2;
+                
+                if (container.scrollLeft >= maxScroll) {
+                    container.scrollLeft -= maxScroll;
+                } else if (container.scrollLeft <= 0) {
+                    container.scrollLeft += maxScroll;
+                }
+            }, { passive: false });
+
+            // Update momentum scrolling with faster speed
+            let momentum = 0;
+            let animationFrame;
+
+            function updateMomentumScroll() {
+                if (Math.abs(momentum) > 0.1) {
+                    container.scrollLeft += momentum;
+                    momentum *= 0.98; // Even slower decay for longer momentum
+                    
+                    const maxScroll = track.scrollWidth / 2;
+                    if (container.scrollLeft >= maxScroll) {
+                        container.scrollLeft -= maxScroll;
+                    } else if (container.scrollLeft <= 0) {
+                        container.scrollLeft += maxScroll;
+                    }
+
+                    animationFrame = requestAnimationFrame(updateMomentumScroll);
+                }
+            }
+
+            container.addEventListener('wheel', (e) => {
+                // Increase from *16 to *64 for much faster momentum
+                momentum = e.deltaY * 64.0;
+                cancelAnimationFrame(animationFrame);
+                animationFrame = requestAnimationFrame(updateMomentumScroll);
+            });
+        });
+    </script>
+</body>
+</html> 
